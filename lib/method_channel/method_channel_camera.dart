@@ -5,8 +5,6 @@
 import 'dart:async';
 import 'dart:math';
 
-
-import 'package:cross_file/cross_file.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -52,7 +50,7 @@ class MethodChannelCamera extends CameraPlatform {
 
   /// Construct a new method channel camera instance.
   MethodChannelCamera() {
-    final channel = MethodChannel('video_stream/device');
+    const channel = MethodChannel('video_stream/device');
     channel.setMethodCallHandler(
         (MethodCall call) => handleDeviceMethodCall(call));
   }
@@ -165,120 +163,10 @@ class MethodChannelCamera extends CameraPlatform {
   }
 
   @override
-  Stream<VideoRecordedEvent> onVideoRecordedEvent(int cameraId) {
-    return _cameraEvents(cameraId).whereType<VideoRecordedEvent>();
-  }
-
-  @override
   Stream<DeviceOrientationChangedEvent> onDeviceOrientationChanged() {
     return deviceEventStreamController.stream
         .whereType<DeviceOrientationChangedEvent>();
   }
-
-  @override
-  Future<void> lockCaptureOrientation(
-    int cameraId,
-    DeviceOrientation orientation,
-  ) async {
-    await _channel.invokeMethod<String>(
-      'lockCaptureOrientation',
-      <String, dynamic>{
-        'cameraId': cameraId,
-        'orientation': serializeDeviceOrientation(orientation)
-      },
-    );
-  }
-
-  @override
-  Future<void> unlockCaptureOrientation(int cameraId) async {
-    await _channel.invokeMethod<String>(
-      'unlockCaptureOrientation',
-      <String, dynamic>{'cameraId': cameraId},
-    );
-  }
-
-  @override
-  Future<XFile> takePicture(int cameraId) async {
-    final path = await _channel.invokeMethod<String>(
-      'takePicture',
-      <String, dynamic>{'cameraId': cameraId},
-    );
-
-    if (path == null) {
-      throw CameraException(
-        'INVALID_PATH',
-        'The platform "$defaultTargetPlatform" did not return a path while reporting success. The platform should always return a valid path or report an error.',
-      );
-    }
-
-    return XFile(path);
-  }
-
-  @override
-  Future<void> prepareForVideoRecording() =>
-      _channel.invokeMethod<void>('prepareForVideoRecording');
-
-  @override
-  Future<void> startVideoRecording(int cameraId,
-      {Duration? maxVideoDuration}) async {
-    await _channel.invokeMethod<void>(
-      'startVideoRecording',
-      <String, dynamic>{
-        'cameraId': cameraId,
-        'maxVideoDuration': maxVideoDuration?.inMilliseconds,
-      },
-    );
-  }
-
-  @override
-  Future<XFile> stopVideoRecording(int cameraId) async {
-    final path = await _channel.invokeMethod<String>(
-      'stopVideoRecording',
-      <String, dynamic>{'cameraId': cameraId},
-    );
-
-    if (path == null) {
-      throw CameraException(
-        'INVALID_PATH',
-        'The platform "$defaultTargetPlatform" did not return a path while reporting success. The platform should always return a valid path or report an error.',
-      );
-    }
-
-    return XFile(path);
-  }
-
-  @override
-  Future<void> pauseVideoRecording(int cameraId) => _channel.invokeMethod<void>(
-        'pauseVideoRecording',
-        <String, dynamic>{'cameraId': cameraId},
-      );
-
-  @override
-  Future<void> resumeVideoRecording(int cameraId) =>
-      _channel.invokeMethod<void>(
-        'resumeVideoRecording',
-        <String, dynamic>{'cameraId': cameraId},
-      );
-
-  @override
-  Future<void> setFlashMode(int cameraId, FlashMode mode) =>
-      _channel.invokeMethod<void>(
-        'setFlashMode',
-        <String, dynamic>{
-          'cameraId': cameraId,
-          'mode': _serializeFlashMode(mode),
-        },
-      );
-
-  @override
-  Future<void> setExposureMode(int cameraId, ExposureMode mode) =>
-      _channel.invokeMethod<void>(
-        'setExposureMode',
-        <String, dynamic>{
-          'cameraId': cameraId,
-          'mode': serializeExposureMode(mode),
-        },
-      );
 
   @override
   Future<void> setExposurePoint(int cameraId, Point<double>? point) {
@@ -405,22 +293,6 @@ class MethodChannelCamera extends CameraPlatform {
     return Texture(textureId: cameraId);
   }
 
-  /// Returns the flash mode as a String.
-  String _serializeFlashMode(FlashMode flashMode) {
-    switch (flashMode) {
-      case FlashMode.off:
-        return 'off';
-      case FlashMode.auto:
-        return 'auto';
-      case FlashMode.always:
-        return 'always';
-      case FlashMode.torch:
-        return 'torch';
-      default:
-        throw ArgumentError('Unknown FlashMode value');
-    }
-  }
-
   /// Returns the resolution preset as a String.
   String _serializeResolutionPreset(ResolutionPreset resolutionPreset) {
     switch (resolutionPreset) {
@@ -484,15 +356,6 @@ class MethodChannelCamera extends CameraPlatform {
       case 'camera_closing':
         cameraEventStreamController.add(CameraClosingEvent(
           cameraId,
-        ));
-        break;
-      case 'video_recorded':
-        cameraEventStreamController.add(VideoRecordedEvent(
-          cameraId,
-          XFile(call.arguments['path']),
-          call.arguments['maxVideoDuration'] != null
-              ? Duration(milliseconds: call.arguments['maxVideoDuration'])
-              : null,
         ));
         break;
       case 'error':

@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
-import 'dart:io';
-
 import 'package:cross_file/cross_file.dart';
 import 'package:video_stream/types/types.dart';
 
@@ -199,6 +196,7 @@ class CameraClosingEvent extends CameraEvent {
           runtimeType == other.runtimeType;
 
   @override
+  // ignore: unnecessary_overrides
   int get hashCode => super.hashCode;
 }
 

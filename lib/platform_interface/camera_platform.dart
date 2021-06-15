@@ -5,9 +5,6 @@
 import 'dart:async';
 import 'dart:math';
 
-
-import 'package:cross_file/cross_file.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:video_stream/events/camera_event.dart';
@@ -90,10 +87,6 @@ abstract class CameraPlatform extends PlatformInterface {
     throw UnimplementedError('onCameraError() is not implemented.');
   }
 
-  /// The camera finished recording a video
-  Stream<VideoRecordedEvent> onVideoRecordedEvent(int cameraId) {
-    throw UnimplementedError('onCameraTimeLimitReached() is not implemented.');
-  }
 
   /// The device orientation changed.
   ///
@@ -103,63 +96,6 @@ abstract class CameraPlatform extends PlatformInterface {
   Stream<DeviceOrientationChangedEvent> onDeviceOrientationChanged() {
     throw UnimplementedError(
         'onDeviceOrientationChanged() is not implemented.');
-  }
-
-  /// Locks the capture orientation.
-  Future<void> lockCaptureOrientation(
-      int cameraId, DeviceOrientation orientation) {
-    throw UnimplementedError('lockCaptureOrientation() is not implemented.');
-  }
-
-  /// Unlocks the capture orientation.
-  Future<void> unlockCaptureOrientation(int cameraId) {
-    throw UnimplementedError('unlockCaptureOrientation() is not implemented.');
-  }
-
-  /// Captures an image and returns the file where it was saved.
-  Future<XFile> takePicture(int cameraId) {
-    throw UnimplementedError('takePicture() is not implemented.');
-  }
-
-  /// Prepare the capture session for video recording.
-  Future<void> prepareForVideoRecording() {
-    throw UnimplementedError('prepareForVideoRecording() is not implemented.');
-  }
-
-  /// Starts a video recording.
-  ///
-  /// The length of the recording can be limited by specifying the [maxVideoDuration].
-  /// By default no maximum duration is specified,
-  /// meaning the recording will continue until manually stopped.
-  /// With [maxVideoDuration] set the video is returned in a [VideoRecordedEvent]
-  /// through the [onVideoRecordedEvent] stream when the set duration is reached.
-  Future<void> startVideoRecording(int cameraId, {Duration? maxVideoDuration}) {
-    throw UnimplementedError('startVideoRecording() is not implemented.');
-  }
-
-  /// Stops the video recording and returns the file where it was saved.
-  Future<XFile> stopVideoRecording(int cameraId) {
-    throw UnimplementedError('stopVideoRecording() is not implemented.');
-  }
-
-  /// Pause video recording.
-  Future<void> pauseVideoRecording(int cameraId) {
-    throw UnimplementedError('pauseVideoRecording() is not implemented.');
-  }
-
-  /// Resume video recording after pausing.
-  Future<void> resumeVideoRecording(int cameraId) {
-    throw UnimplementedError('resumeVideoRecording() is not implemented.');
-  }
-
-  /// Sets the flash mode for the selected camera.
-  Future<void> setFlashMode(int cameraId, FlashMode mode) {
-    throw UnimplementedError('setFlashMode() is not implemented.');
-  }
-
-  /// Sets the exposure mode for taking pictures.
-  Future<void> setExposureMode(int cameraId, ExposureMode mode) {
-    throw UnimplementedError('setExposureMode() is not implemented.');
   }
 
   /// Sets the exposure point for automatically determining the exposure values.

@@ -8,7 +8,10 @@ import 'package:video_stream/camera_preview.dart';
 import 'package:video_stream/types/camera_description.dart';
 import 'package:video_stream/types/types.dart';
 
+
 class CameraExampleHome extends StatefulWidget {
+  const CameraExampleHome({Key? key}) : super(key: key);
+
   @override
   _CameraExampleHomeState createState() {
     return _CameraExampleHomeState();
@@ -103,10 +106,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
               decoration: BoxDecoration(
                 color: Colors.black,
                 border: Border.all(
-                  color:
-                  controller != null && controller!.value.isRecordingVideo
-                      ? Colors.redAccent
-                      : Colors.grey,
+                  color: Colors.grey,
                   width: 3.0,
                 ),
               ),
@@ -201,10 +201,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
               title: Icon(getCameraLensIcon(cameraDescription.lensDirection)),
               groupValue: controller?.description,
               value: cameraDescription,
-              onChanged:
-              controller != null && controller!.value.isRecordingVideo
-                  ? null
-                  : onChanged,
+              onChanged: onChanged,
             ),
           ),
         );
@@ -231,7 +228,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       details.localPosition.dx / constraints.maxWidth,
       details.localPosition.dy / constraints.maxHeight,
     );
-    cameraController.setExposurePoint(offset);
     cameraController.setFocusPoint(offset);
   }
 
@@ -283,20 +279,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  void onCaptureOrientationLockButtonPressed() async {
-    if (controller != null) {
-      final CameraController cameraController = controller!;
-      if (cameraController.value.isCaptureOrientationLocked) {
-        await cameraController.unlockCaptureOrientation();
-        showInSnackBar('Capture orientation unlocked');
-      } else {
-        await cameraController.lockCaptureOrientation();
-        showInSnackBar(
-            'Capture orientation locked to ${cameraController.value.lockedCaptureOrientation.toString().split('.').last}');
-      }
-    }
-  }
-
   Future<void> setFocusMode(FocusMode mode) async {
     if (controller == null) {
       return;
@@ -318,10 +300,13 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   }
 }
 
+
 class CameraApp extends StatelessWidget {
+  const CameraApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       home: CameraExampleHome(),
     );
   }
@@ -337,5 +322,5 @@ Future<void> main() async {
   } on CameraException catch (e) {
     logError(e.code, e.description);
   }
-  runApp(CameraApp());
+  runApp(const CameraApp());
 }
