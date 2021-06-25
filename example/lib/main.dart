@@ -8,7 +8,6 @@ import 'package:video_stream/camera_preview.dart';
 import 'package:video_stream/types/camera_description.dart';
 import 'package:video_stream/types/types.dart';
 
-
 class CameraExampleHome extends StatefulWidget {
   const CameraExampleHome({Key? key}) : super(key: key);
 
@@ -42,7 +41,8 @@ void logError(String code, String? message) {
 
 class _CameraExampleHomeState extends State<CameraExampleHome>
     with WidgetsBindingObserver, TickerProviderStateMixin {
-  CameraController? controller;
+  CameraController? controller =
+      CameraController(cameras[1], ResolutionPreset.high);
   XFile? imageFile;
   XFile? videoFile;
   VideoPlayerController? videoController;
@@ -56,8 +56,13 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   // Counting pointers (number of user fingers on screen)
   int _pointers = 0;
 
+  final String streamUrl = "rtmp://yourrtmpserver/Live";
+  String? cameraDirection;
+  late bool streaming;
+
   @override
   void initState() {
+    _initialize();
     super.initState();
     WidgetsBinding.instance?.addObserver(this);
   }
@@ -68,60 +73,132 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final CameraController? cameraController = controller;
-
-    // App state changed before we got the chance to initialize.
-    if (cameraController == null || !cameraController.value.isInitialized) {
+  Future<void> _initialize() async {
+    streaming = false;
+    cameraDirection = 'front';
+    // controller = CameraController(cameras[1], Resolution.high);
+    await controller!.initialize();
+    if (!mounted) {
       return;
     }
+    setState(() {});
+  }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (controller == null || !controller!.value.isInitialized) {
+      return;
+    }
     if (state == AppLifecycleState.inactive) {
-      cameraController.dispose();
+      controller?.dispose();
     } else if (state == AppLifecycleState.resumed) {
-      onNewCameraSelected(cameraController.description);
+      if (controller != null) {
+        onNewCameraSelected(controller!.description);
+      }
     }
   }
+
+  // @override
+  // void didChangeAppLifecycleState(AppLifecycleState state) {
+  //   final CameraController? cameraController = controller;
+
+  //   // App state changed before we got the chance to initialize.
+  //   if (cameraController == null || !cameraController.value.isInitialized) {
+  //     return;
+  //   }
+
+  //   if (state == AppLifecycleState.inactive) {
+  //     cameraController.dispose();
+  //   } else if (state == AppLifecycleState.resumed) {
+  //     onNewCameraSelected(cameraController.description);
+  //   }
+  // }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: true,
       key: _scaffoldKey,
-      appBar: AppBar(
-        title: const Text('Camera example'),
-      ),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: Container(
-              child: Padding(
-                padding: const EdgeInsets.all(1.0),
+      body: SingleChildScrollView(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height,
+          child: Stack(
+            children: <Widget>[
+              Container(
+                color: Colors.black,
                 child: Center(
                   child: _cameraPreviewWidget(),
                 ),
               ),
-              decoration: BoxDecoration(
-                color: Colors.black,
-                border: Border.all(
-                  color: Colors.grey,
-                  width: 3.0,
+              Positioned(
+                top: 0.0,
+                left: 0.0,
+                right: 0.0,
+                child: AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0.0,
+                  title: streaming
+                      ? OutlinedButton(
+                          onPressed: () => print('stop pushed'),
+                          // onPressed: () => stopStream(),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.videocam_off),
+                              SizedBox(width: 10),
+                              Text(
+                                'End Stream',
+                                style: TextStyle(
+                                  fontSize: 20.0,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : OutlinedButton(
+                          onPressed: () => print('start pushed'),
+                          // onPressed: () => startStream(),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.videocam),
+                              SizedBox(width: 10),
+                              Text(
+                                'Start Stream',
+                                style: TextStyle(
+                                  fontSize: 20.0,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                  actions: [
+                    Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: IconButton(
+                        color: Theme.of(context).primaryColor,
+                        icon: const Icon(Icons.switch_video),
+                        tooltip: 'Switch Camera',
+                        onPressed: () {
+                          // toggleCameraDirection();
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(5.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: <Widget>[
-                _cameraTogglesRowWidget(),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -132,7 +209,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
     if (cameraController == null || !cameraController.value.isInitialized) {
       return const Text(
-        'Tap a camera',
+        'Video Stream',
         style: TextStyle(
           color: Colors.white,
           fontSize: 24.0,
@@ -147,13 +224,13 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
           controller!,
           child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onScaleStart: _handleScaleStart,
-                  onScaleUpdate: _handleScaleUpdate,
-                  onTapDown: (details) => onViewFinderTap(details, constraints),
-                );
-              }),
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onScaleStart: _handleScaleStart,
+              onScaleUpdate: _handleScaleUpdate,
+              onTapDown: (details) => onViewFinderTap(details, constraints),
+            );
+          }),
         ),
       );
     }
@@ -174,8 +251,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
     await controller!.setZoomLevel(_currentScale);
   }
-
-  
 
   /// Display a row of toggle to select the camera (or a message if no camera is available).
   Widget _cameraTogglesRowWidget() {
@@ -214,7 +289,8 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   String timestamp() => DateTime.now().millisecondsSinceEpoch.toString();
 
   void showInSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
@@ -271,7 +347,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-
   void onAudioModeButtonPressed() {
     enableAudio = !enableAudio;
     if (controller != null) {
@@ -292,14 +367,11 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-
-
   void _showCameraException(CameraException e) {
     logError(e.code, e.description);
     showInSnackBar('Error: ${e.code}\n${e.description}');
   }
 }
-
 
 class CameraApp extends StatelessWidget {
   const CameraApp({Key? key}) : super(key: key);

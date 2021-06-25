@@ -11,7 +11,8 @@ import 'camera_controller.dart';
 /// A widget showing a live camera preview.
 class CameraPreview extends StatelessWidget {
   /// Creates a preview widget for the given camera controller.
-  const CameraPreview(this.controller, {Key? key, this.child}) : super(key: key);
+  const CameraPreview(this.controller, {Key? key, this.child})
+      : super(key: key);
 
   /// The controller for the camera that the preview is shown for.
   final CameraController controller;
@@ -23,9 +24,10 @@ class CameraPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     return controller.value.isInitialized
         ? AspectRatio(
-            aspectRatio: _isLandscape()
-                ? controller.value.aspectRatio
-                : (1 / controller.value.aspectRatio),
+            // aspectRatio: _isLandscape()
+            //     ? controller.value.aspectRatio
+            //     : (1 / controller.value.aspectRatio),
+            aspectRatio: controller.value.aspectRatio,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -49,8 +51,7 @@ class CameraPreview extends StatelessWidget {
   }
 
   bool _isLandscape() {
-    return [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
-        .contains(_getApplicableOrientation());
+    return [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight].contains(_getApplicableOrientation());
   }
 
   int _getQuarterTurns() {

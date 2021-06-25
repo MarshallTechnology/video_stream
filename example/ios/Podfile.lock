@@ -1,11 +1,15 @@
 PODS:
   - Flutter (1.0.0)
+  - HaishinKit (1.1.5):
+    - Logboard (~> 2.2.1)
+  - Logboard (2.2.2)
   - path_provider (0.0.1):
     - Flutter
   - video_player (0.0.1):
     - Flutter
   - video_stream (0.0.1):
     - Flutter
+    - HaishinKit (~> 1.1.5)
   - wakelock (0.0.1):
     - Flutter
 
@@ -15,6 +19,11 @@ DEPENDENCIES:
   - video_player (from `.symlinks/plugins/video_player/ios`)
   - video_stream (from `.symlinks/plugins/video_stream/ios`)
   - wakelock (from `.symlinks/plugins/wakelock/ios`)
+
+SPEC REPOS:
+  trunk:
+    - HaishinKit
+    - Logboard
 
 EXTERNAL SOURCES:
   Flutter:
@@ -30,9 +39,11 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: 434fef37c0980e73bb6479ef766c45957d4b510c
+  HaishinKit: 5cf385a823dee6b299404877edf418974422bf9f
+  Logboard: 0ab6bbd984ed032b3f0b615cef06779a73445c80
   path_provider: abfe2b5c733d04e238b0d8691db0cfd63a27a93c
   video_player: 9cc823b1d9da7e8427ee591e8438bfbcde500e6e
-  video_stream: 13296f29d896ea2d3570f8ded037c0f1e09c2e4c
+  video_stream: 0244ad0a1217c312394527c9ee67868de49c6343
   wakelock: d0fc7c864128eac40eba1617cb5264d9c940b46f
 
 PODFILE CHECKSUM: aafe91acc616949ddb318b77800a7f51bffa2a4c

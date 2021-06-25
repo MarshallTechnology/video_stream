@@ -314,6 +314,7 @@ static ResolutionPreset getResolutionPresetForString(NSString *preset) {
 @property BOOL enableAudio;
 @property(nonatomic) FLTImageStreamHandler *imageStreamHandler;
 @property(nonatomic) FlutterMethodChannel *methodChannel;
+@property(nonatomic) FlutterEventSink eventSink;
 @property(readonly, nonatomic) AVCaptureSession *captureSession;
 @property(readonly, nonatomic) AVCaptureDevice *captureDevice;
 @property(readonly, nonatomic) AVCapturePhotoOutput *capturePhotoOutput API_AVAILABLE(ios(10));
@@ -322,6 +323,7 @@ static ResolutionPreset getResolutionPresetForString(NSString *preset) {
 @property(readonly) CVPixelBufferRef volatile latestPixelBuffer;
 @property(readonly, nonatomic) CGSize previewSize;
 @property(readonly, nonatomic) CGSize captureSize;
+@property(readonly, nonatomic) CGSize streamingSize;
 @property(strong, nonatomic) AVAssetWriter *videoWriter;
 @property(strong, nonatomic) AVAssetWriterInput *videoWriterInput;
 @property(strong, nonatomic) AVAssetWriterInput *audioWriterInput;
@@ -329,13 +331,17 @@ static ResolutionPreset getResolutionPresetForString(NSString *preset) {
 @property(strong, nonatomic) AVCaptureVideoDataOutput *videoOutput;
 @property(strong, nonatomic) AVCaptureAudioDataOutput *audioOutput;
 @property(strong, nonatomic) NSString *videoRecordingPath;
+@property(strong, nonatomic) SwiftVideoStreamPlugin *rtmpStream;
 @property(assign, nonatomic) BOOL isRecording;
 @property(assign, nonatomic) BOOL isRecordingPaused;
+@property(assign, nonatomic) BOOL isStreaming;
+@property(assign, nonatomic) BOOL isStreamingPaused;
 @property(assign, nonatomic) BOOL videoIsDisconnected;
 @property(assign, nonatomic) BOOL audioIsDisconnected;
 @property(assign, nonatomic) BOOL isAudioSetup;
 @property(assign, nonatomic) BOOL isStreamingImages;
 @property(assign, nonatomic) ResolutionPreset resolutionPreset;
+@property(assign, nonatomic) ResolutionPreset streamingPreset;
 @property(assign, nonatomic) ExposureMode exposureMode;
 @property(assign, nonatomic) FocusMode focusMode;
 @property(assign, nonatomic) FlashMode flashMode;
@@ -346,6 +352,20 @@ static ResolutionPreset getResolutionPresetForString(NSString *preset) {
 @property(assign, nonatomic) CMTime audioTimeOffset;
 @property(nonatomic) CMMotionManager *motionManager;
 @property AVAssetWriterInputPixelBufferAdaptor *videoAdaptor;
+- (instancetype)initWithCameraName:(NSString *)cameraName
+                  resolutionPreset:(NSString *)resolutionPreset
+                       enableAudio:(BOOL)enableAudio
+                     dispatchQueue:(dispatch_queue_t)dispatchQueue
+                             error:(NSError **)error;
+
+- (void)start;
+- (void)stop;
+- (void)startVideoRecordingAtPath:(NSString *)path result:(FlutterResult)result;
+- (void)startVideoStreamingAtUrl:(NSString *)url bitrate:(NSNumber *)bitrate result:(FlutterResult)result;
+- (void)startVideoRecordingAndStreamingAtUrl:(NSString *)url bitrate:(NSNumber *)bitrate filePath:(NSString *) result:(FlutterResult)result;
+- (void)startImageStreamWithMessenger:(NSObject<FlutterBinaryMessenger> *)messenger;
+- (void)stopImageStream;
+- (void)captureToFile:(NSString *)filename result:(FlutterResult)result;
 @end
 
 @implementation FLTCam {
@@ -578,6 +598,65 @@ NSString *const errorMethod = @"error";
       if ([_captureSession canSetSessionPreset:AVCaptureSessionPresetLow]) {
         _captureSession.sessionPreset = AVCaptureSessionPresetLow;
         _previewSize = CGSizeMake(352, 288);
+      } else {
+        NSError *error =
+            [NSError errorWithDomain:NSCocoaErrorDomain
+                                code:NSURLErrorUnknown
+                            userInfo:@{
+                              NSLocalizedDescriptionKey :
+                                  @"No capture session available for current capture session."
+                            }];
+        @throw error;
+      }
+  }
+}
+
+- (void)setStreamingSessionPreset:(ResolutionPreset)resolutionPreset {
+  switch (resolutionPreset) {
+    case max:
+    case ultraHigh:
+      if (@available(iOS 9.0, *)) {
+        if ([_captureSession canSetSessionPreset:AVCaptureSessionPreset3840x2160]) {
+          _captureSession.sessionPreset = AVCaptureSessionPreset3840x2160;
+          _streamingSize = CGSizeMake(3840, 2160);
+          break;
+        }
+      }
+      if ([_captureSession canSetSessionPreset:AVCaptureSessionPresetHigh]) {
+        _captureSession.sessionPreset = AVCaptureSessionPresetHigh;
+        _streamingSize =
+            CGSizeMake(_captureDevice.activeFormat.highResolutionStillImageDimensions.width,
+                       _captureDevice.activeFormat.highResolutionStillImageDimensions.height);
+        break;
+      }
+    case veryHigh:
+      if ([_captureSession canSetSessionPreset:AVCaptureSessionPreset1920x1080]) {
+        _captureSession.sessionPreset = AVCaptureSessionPreset1920x1080;
+        _streamingSize = CGSizeMake(1920, 1080);
+        break;
+      }
+    case high:
+      if ([_captureSession canSetSessionPreset:AVCaptureSessionPreset1280x720]) {
+        _captureSession.sessionPreset = AVCaptureSessionPreset1280x720;
+        _streamingSize = CGSizeMake(1280, 720);
+        break;
+      }
+    case medium:
+      if ([_captureSession canSetSessionPreset:AVCaptureSessionPreset640x480]) {
+        _captureSession.sessionPreset = AVCaptureSessionPreset640x480;
+        _streamingSize = CGSizeMake(640, 480);
+        break;
+      }
+    case low:
+      if ([_captureSession canSetSessionPreset:AVCaptureSessionPreset352x288]) {
+        _captureSession.sessionPreset = AVCaptureSessionPreset352x288;
+        _streamingSize = CGSizeMake(352, 288);
+        break;
+      }
+    default:
+      if ([_captureSession canSetSessionPreset:AVCaptureSessionPresetLow]) {
+        _captureSession.sessionPreset = AVCaptureSessionPresetLow;
+        _streamingSize = CGSizeMake(352, 288);
       } else {
         NSError *error =
             [NSError errorWithDomain:NSCocoaErrorDomain
@@ -880,6 +959,123 @@ NSString *const errorMethod = @"error";
   result(nil);
 }
 
+- (void)pauseVideoStreaming {
+    _isStreamingPaused = YES;
+    [_rtmpStream pauseVideoStreaming];
+}
+
+- (void)resumeVideoStreaming {
+    _isStreamingPaused = NO;
+    [_rtmpStream resumeVideoStreaming];
+}
+
+- (NSDictionary*)getStreamStatistics {
+    return [_rtmpStream getStreamStatistics];
+}
+
+- (void)startVideoStreamingAtUrl:(NSString *)url bitrate:(NSNumber *)bitrate result:(FlutterResult)result {
+    if (_isStreaming) {
+        _eventSink(@{@"event" : @"error", @"errorDescription" : @"Video is already streaming!"});
+    }
+    if (!_isStreaming) {
+        if (![self setupWriterForUrl:url ]) {
+            _eventSink(@{@"event" : @"error", @"errorDescription" : @"Setup Writer Failed"});
+            return;
+        }
+        
+        _rtmpStream = [[SwiftVideoStreamPlugin alloc] initWithSink: _eventSink];
+        if (bitrate == nil || bitrate == 0) {
+            bitrate = [NSNumber numberWithInt:160 * 1000];
+        }
+        [_rtmpStream openWithUrl:url width: _streamingSize.width height: _streamingSize.height bitrate: bitrate.integerValue];
+        _isStreaming = YES;
+        _isStreamingPaused = NO;
+        _videoTimeOffset = CMTimeMake(0, 1);
+        _audioTimeOffset = CMTimeMake(0, 1);
+        _videoIsDisconnected = NO;
+        _audioIsDisconnected = NO;
+        result(nil);
+    }
+}
+
+
+- (void)startVideoRecordingAndStreamingAtUrl:(NSString *)url bitrate:(NSNumber *)bitrate filePath:(NSString *)filePath result:(FlutterResult)result {
+    if (!_isStreaming && !_isRecording) {
+        if (![self setupWriterForUrl:url ]) {
+            _eventSink(@{@"event" : @"error", @"errorDescription" : @"Setup Writer Failed"});
+            return;
+        }
+        if (![self setupWriterForPath:filePath ]) {
+            _eventSink(@{@"event" : @"error", @"errorDescription" : @"Setup Writer Failed"});
+            return;
+        }
+        
+        _rtmpStream = [[SwiftVideoStreamPlugin alloc] initWithSink:_eventSink];
+        if (bitrate == nil || bitrate == 0) {
+            bitrate = [NSNumber numberWithInt:160 * 1000];
+        }
+        [_rtmpStream openWithUrl:url width: _streamingSize.width height: _streamingSize.height bitrate: bitrate];
+        _isStreaming = YES;
+        _isStreamingPaused = NO;
+        _videoTimeOffset = CMTimeMake(0, 1);
+        _audioTimeOffset = CMTimeMake(0, 1);
+        _isRecording = YES;
+        _isRecordingPaused = NO;
+        _videoIsDisconnected = NO;
+        _audioIsDisconnected = NO;
+        result(nil);
+    } else {
+        _eventSink(@{@"event" : @"error", @"errorDescription" : @"Video is already recording!"});
+    }
+}
+
+- (void)stopVideoRecordingOrStreamingWithResult:(FlutterResult)result {
+    if (!_isStreaming && !_isRecording) {
+        NSError *error =
+        [NSError errorWithDomain:NSCocoaErrorDomain
+                            code:NSURLErrorResourceUnavailable
+                        userInfo:@{NSLocalizedDescriptionKey : @"Video is not recording!"}];
+        result(getFlutterError(error));
+    } else {
+        if (_isRecording) {
+            _isRecording = NO;
+            if (_videoWriter.status != AVAssetWriterStatusUnknown) {
+                [_videoWriter finishWritingWithCompletionHandler:^{
+                    if (self->_videoWriter.status == AVAssetWriterStatusCompleted) {
+                    } else {
+                        self->_eventSink(@{
+                            @"event" : @"error",
+                            @"errorDescription" : @"AVAssetWriter could not finish writing!"
+                                         });
+                    }
+                }];
+            }
+        }
+        
+        if (_isStreaming) {
+            _isStreaming = NO;
+            [_rtmpStream close];
+        }
+        result(nil);
+    }
+}
+
+- (void)stopVideoStreamingWithResult:(FlutterResult)result {
+    if (!_isStreaming) {
+        NSError *error =
+        [NSError errorWithDomain:NSCocoaErrorDomain
+                            code:NSURLErrorResourceUnavailable
+                        userInfo:@{NSLocalizedDescriptionKey : @"Video is not streaming!"}];
+        result(getFlutterError(error));
+    } else {
+        if (_isStreaming) {
+            _isStreaming = NO;
+            [_rtmpStream close];
+        }
+        result(nil);
+    }
+}
+
 - (void)lockCaptureOrientationWithResult:(FlutterResult)result
                              orientation:(NSString *)orientationStr {
   UIDeviceOrientation orientation;
@@ -1149,6 +1345,28 @@ NSString *const errorMethod = @"error";
   } else {
     return _captureDevice.activeFormat.videoMaxZoomFactor;
   }
+}
+
+- (BOOL)setupWriterForUrl:(NSString *)path {
+    NSError *error = nil;
+    NSURL *outputURL;
+    if (path != nil) {
+        outputURL = [NSURL fileURLWithPath:path];
+    } else {
+        return NO;
+    }
+    if (_enableAudio && !_isAudioSetup) {
+        [self setUpCaptureSessionForAudio];
+    }
+    
+    // Add the audio input
+    if (_enableAudio) {
+        [_audioOutput setSampleBufferDelegate:self queue:_dispatchQueue];
+    }
+    
+    [_captureVideoOutput setSampleBufferDelegate:self queue:_dispatchQueue];
+    
+    return YES;
 }
 
 - (BOOL)setupWriterForPath:(NSString *)path {
