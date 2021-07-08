@@ -16,7 +16,7 @@ public class SwiftVideoStreamPlugin : NSObject {
     private var name: String? = nil
     private var retries: Int = 0
     private let eventSink: FlutterEventSink
-//    private let myDelegate = MyRTMPStreamQoSDelagate()
+    private let myDelegate = MyRTMPStreamQoSDelagate()
     
     @objc
     public init(sink: @escaping FlutterEventSink) {
@@ -54,7 +54,7 @@ public class SwiftVideoStreamPlugin : NSObject {
         rtmpStream.captureSettings = [
             .fps: 30
         ]
-//        rtmpStream.delegate = myDelegate
+        rtmpStream.delegate = myDelegate
         self.retries = 0
         // Run this on the ui thread.
         DispatchQueue.main.async {
@@ -191,38 +191,39 @@ public class SwiftVideoStreamPlugin : NSObject {
 }
 
 
-//class MyRTMPStreamQoSDelagate: RTMPStreamDelegate {
-//    let minBitrate: UInt32 = 300 * 1024
-//    let maxBitrate: UInt32 = 2500 * 1024
-//    let incrementBitrate: UInt32 = 512 * 1024
-//
-//    func didPublishSufficientBW(_ stream: RTMPStream, withConnection: RTMPConnection) {
-//        guard let videoBitrate = stream.videoSettings[.bitrate] as? UInt32 else { return }
-//
-//        var newVideoBitrate = videoBitrate + incrementBitrate
-//        if newVideoBitrate > maxBitrate {
-//            newVideoBitrate = maxBitrate
-//        }
-//        print("didPublishSufficientBW update: \(videoBitrate) -> \(newVideoBitrate)")
-//        stream.videoSettings[.bitrate] = newVideoBitrate
-//    }
-//
-//
-//    // detect upload insufficent BandWidth
-//    func didPublishInsufficientBW(_ stream:RTMPStream, withConnection:RTMPConnection) {
-//        guard let videoBitrate = stream.videoSettings[.bitrate] as? UInt32 else { return }
-//
-//        var         newVideoBitrate = UInt32(videoBitrate / 2)
-//        if newVideoBitrate < minBitrate {
-//            newVideoBitrate = minBitrate
-//        }
-//        print("didPublishInsufficientBW update: \(videoBitrate) -> \(newVideoBitrate)")
-//        stream.videoSettings[.bitrate] = newVideoBitrate
-//    }
-//
-//    func clear() {
-//    }
-//}
+class MyRTMPStreamQoSDelagate: RTMPStreamDelegate {
+    let minBitrate: UInt32 = 300 * 1024
+    let maxBitrate: UInt32 = 2500 * 1024
+    let incrementBitrate: UInt32 = 512 * 1024
+    
+    func didPublishSufficientBW(_ stream: RTMPStream, withConnection: RTMPConnection) {
+        guard let videoBitrate = stream.videoSettings[.bitrate] as? UInt32 else { return }
+        
+        var newVideoBitrate = videoBitrate + incrementBitrate
+        if newVideoBitrate > maxBitrate {
+            newVideoBitrate = maxBitrate
+        }
+        print("didPublishSufficientBW update: \(videoBitrate) -> \(newVideoBitrate)")
+        stream.videoSettings[.bitrate] = newVideoBitrate
+    }
+    
+    
+    // detect upload insufficent BandWidth
+    func didPublishInsufficientBW(_ stream:RTMPStream, withConnection:RTMPConnection) {
+        guard let videoBitrate = stream.videoSettings[.bitrate] as? UInt32 else { return }
+        
+        var         newVideoBitrate = UInt32(videoBitrate / 2)
+        if newVideoBitrate < minBitrate {
+            newVideoBitrate = minBitrate
+        }
+        print("didPublishInsufficientBW update: \(videoBitrate) -> \(newVideoBitrate)")
+        stream.videoSettings[.bitrate] = newVideoBitrate
+    }
+    
+    func clear() {
+    }
+}
+
 
 //public class SwiftVideoStreamPlugin: NSObject, FlutterPlugin {
 //  public static func register(with registrar: FlutterPluginRegistrar) {

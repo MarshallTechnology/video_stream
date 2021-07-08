@@ -1,18 +1,20 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2018 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:typed_data';
-
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:video_stream/types/types.dart';
+part of 'camera.dart';
 
 /// A single color plane of image data.
 ///
 /// The number and meaning of the planes in an image are determined by the
 /// format of the Image.
 class Plane {
+  final Uint8List bytes;
+  final int? bytesPerPixel;
+  final int bytesPerRow;
+  final int? height;
+  final int? width;
+  
   Plane._fromPlatformData(Map<dynamic, dynamic> data)
       : bytes = data['bytes'],
         bytesPerPixel = data['bytesPerPixel'],
@@ -20,33 +22,37 @@ class Plane {
         height = data['height'],
         width = data['width'];
 
-  /// Bytes representing this plane.
-  final Uint8List bytes;
+}
 
-  /// The distance between adjacent pixel samples on Android, in bytes.
+// TODO:Turn [ImageFormatGroup] to a class with int values.
+
+enum ImageFormatGroup {
+  /// The image format does not fit into any specific group.
+  unknown,
+
+  /// Multi-plane YUV 420 format.
   ///
-  /// Will be `null` on iOS.
-  final int? bytesPerPixel;
-
-  /// The row stride for this color plane, in bytes.
-  final int bytesPerRow;
-
-  /// Height of the pixel buffer on iOS.
+  /// This format is a generic YCbCr format, capable of describing any 4:2:0
+  /// chroma-subsampled planar or semiplanar buffer (but not fully interleaved),
+  /// with 8 bits per color sample.
   ///
-  /// Will be `null` on Android
-  final int? height;
-
-  /// Width of the pixel buffer on iOS.
+  /// On Android, this is `android.graphics.ImageFormat.YUV_420_888`. See
+  /// https://developer.android.com/reference/android/graphics/ImageFormat.html#YUV_420_888
   ///
-  /// Will be `null` on Android.
-  final int? width;
+  /// On iOS, this is `kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange`. See
+  /// https://developer.apple.com/documentation/corevideo/1563591-pixel_format_identifiers/kcvpixelformattype_420ypcbcr8biplanarvideorange?language=objc
+  yuv420,
+
+  /// 32-bit BGRA.
+  ///
+  /// On iOS, this is `kCVPixelFormatType_32BGRA`. See
+  /// https://developer.apple.com/documentation/corevideo/1563591-pixel_format_identifiers/kcvpixelformattype_32bgra?language=objc
+  bgra8888,
 }
 
 /// Describes how pixels are represented in an image.
 class ImageFormat {
   ImageFormat._fromPlatformData(this.raw) : group = _asImageFormatGroup(raw);
-
-  /// Describes the format group the raw image format falls into.
   final ImageFormatGroup group;
 
   /// Raw version of the format from the Android or iOS platform.
@@ -61,13 +67,9 @@ class ImageFormat {
 
 ImageFormatGroup _asImageFormatGroup(dynamic rawFormat) {
   if (defaultTargetPlatform == TargetPlatform.android) {
-    switch (rawFormat) {
-      // android.graphics.ImageFormat.YUV_420_888
-      case 35:
-        return ImageFormatGroup.yuv420;
-      // android.graphics.ImageFormat.JPEG
-      case 256:
-        return ImageFormatGroup.jpeg;
+    // android.graphics.ImageFormat.YUV_420_888
+    if (rawFormat == 35) {
+      return ImageFormatGroup.yuv420;
     }
   }
 
@@ -85,44 +87,16 @@ ImageFormatGroup _asImageFormatGroup(dynamic rawFormat) {
   return ImageFormatGroup.unknown;
 }
 
-/// A single complete image buffer from the platform camera.
-///
-/// This class allows for direct application access to the pixel data of an
-/// Image through one or more [Uint8List]. Each buffer is encapsulated in a
-/// [Plane] that describes the layout of the pixel data in that plane. The
-/// [CameraImage] is not directly usable as a UI resource.
-///
-/// Although not all image formats are planar on iOS, we treat 1-dimensional
-/// images as single planar images.
 class CameraImage {
-  /// CameraImage Constructor
-  CameraImage.fromPlatformData(Map<dynamic, dynamic> data)
-      : format = ImageFormat._fromPlatformData(data['format']),
-        height = data['height'],
-        width = data['width'],
-        planes = List<Plane>.unmodifiable(data['planes']
-            .map((dynamic planeData) => Plane._fromPlatformData(planeData)));
-
-  /// Format of the image provided.
-  ///
-  /// Determines the number of planes needed to represent the image, and
-  /// the general layout of the pixel data in each [Uint8List].
   final ImageFormat format;
-
-  /// Height of the image in pixels.
-  ///
-  /// For formats where some color channels are subsampled, this is the height
-  /// of the largest-resolution plane.
   final int height;
-
-  /// Width of the image in pixels.
-  ///
-  /// For formats where some color channels are subsampled, this is the width
-  /// of the largest-resolution plane.
   final int width;
-
-  /// The pixels planes for this image.
-  ///
-  /// The number of planes is determined by the format of the image.
   final List<Plane> planes;
+
+  CameraImage._fromPlatformData(Map<dynamic, dynamic> data)
+    : format = ImageFormat._fromPlatformData(data['format']),
+      height = data['height'],
+      width = data['width'],
+      planes = List<Plane>.unmodifiable(data['planes'].map((dynamic planeData) => Plane._fromPlatformData(planeData)));
+
 }
