@@ -48,12 +48,12 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
   void initState() {
     _initialize();
     super.initState();
-    WidgetsBinding.instance!.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance!.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 Future<void> _initialize() async {
