@@ -11,14 +11,11 @@ dependencies:
   flutter:
     sdk: flutter
 
-  cross_file: ^0.3.1+1
-  pedantic: ^1.11.0
-  quiver: ^3.0.1
   stream_transform: ^2.0.0
 
 dev_dependencies:
   path_provider: ^2.0.2
-  video_player: ^2.1.4
+  video_player: ^2.1.10
   flutter_test:
     sdk: flutter
   flutter_lints: ^1.0.0

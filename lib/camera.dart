@@ -514,8 +514,7 @@ class CameraController extends ValueNotifier<CameraValue> {
       );
     }
     try {
-      value =
-          value.copyWith(isStreamingVideoRtmp: false, isRecordingVideo: false);
+      value = value.copyWith(isStreamingVideoRtmp: false, isRecordingVideo: false);
       print("Stop video streaming call");
       await _channel.invokeMethod<void>(
         'stopRecordingOrStreaming',

@@ -5,7 +5,6 @@ import 'package:video_player/video_player.dart';
 import 'package:video_stream/camera.dart';
 import 'package:wakelock/wakelock.dart';
 
-
 class CameraExampleHome extends StatefulWidget {
   const CameraExampleHome({Key? key}) : super(key: key);
 
@@ -27,10 +26,13 @@ IconData getCameraLensIcon(CameraLensDirection direction) {
   }
 }
 
-void logError(String code, String message) => print('Error: $code\nError Message: $message');
+void logError(String code, String message) =>
+    print('Error: $code\nError Message: $message');
 
-class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindingObserver, TickerProviderStateMixin {
-  CameraController? controller = CameraController(cameras[1], ResolutionPreset.high);
+class _CameraExampleHomeState extends State<CameraExampleHome>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
+  CameraController? controller =
+      CameraController(cameras[1], ResolutionPreset.high);
   String? imagePath;
   String? videoPath;
   String? url;
@@ -56,7 +58,8 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
-Future<void> _initialize() async {
+
+  Future<void> _initialize() async {
     streaming = false;
     cameraDirection = 'front';
     // controller = CameraController(cameras[1], Resolution.high);
@@ -66,6 +69,7 @@ Future<void> _initialize() async {
     }
     setState(() {});
   }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // App state changed before we got the chance to initialize.
@@ -114,7 +118,6 @@ Future<void> _initialize() async {
                   title: streaming
                       ? OutlinedButton(
                           onPressed: () => onStopButtonPressed(),
-                          // onPressed: () => stopStream(),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -257,7 +260,7 @@ Future<void> _initialize() async {
           streaming = false;
         });
       }
-      showInSnackBar('Video streamed to: $url');
+      showInSnackBar('Streaming to: $url');
     });
     Wakelock.disable();
   }
@@ -265,24 +268,20 @@ Future<void> _initialize() async {
   void onPauseStreamingButtonPressed() {
     pauseVideoStreaming().then((_) {
       if (mounted) setState(() {});
-      showInSnackBar('Video streaming paused');
+      showInSnackBar('Streaming paused');
     });
   }
 
   void onResumeStreamingButtonPressed() {
     resumeVideoStreaming().then((_) {
       if (mounted) setState(() {});
-      showInSnackBar('Video streaming resumed');
+      showInSnackBar('Streaming resumed');
     });
   }
 
   Future<String?> startVideoStreaming() async {
     if (!controller!.value.isInitialized) {
       showInSnackBar('Error: select a camera first.');
-      return null;
-    }
-
-    if (controller!.value.isStreamingVideoRtmp) {
       return null;
     }
 
@@ -308,10 +307,6 @@ Future<void> _initialize() async {
   }
 
   Future<void> stopVideoStreaming() async {
-    if (!controller!.value.isStreamingVideoRtmp) {
-      return null;
-    }
-
     try {
       await controller!.stopVideoStreaming();
       if (_timer != null) {
@@ -320,13 +315,13 @@ Future<void> _initialize() async {
       }
     } on CameraException catch (e) {
       _showCameraException(e);
-      return null;
+      return;
     }
   }
 
   Future<void> pauseVideoStreaming() async {
     if (!controller!.value.isStreamingVideoRtmp) {
-      return null;
+      return;
     }
 
     try {
@@ -338,10 +333,6 @@ Future<void> _initialize() async {
   }
 
   Future<void> resumeVideoStreaming() async {
-    if (!controller!.value.isStreamingVideoRtmp) {
-      return null;
-    }
-
     try {
       await controller!.resumeVideoStreaming();
     } on CameraException catch (e) {
