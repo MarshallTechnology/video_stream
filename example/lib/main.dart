@@ -91,6 +91,78 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  toggleCameraDirection() async {
+    if (cameraDirection == 'front') {
+      if (controller != null) {
+        await controller?.dispose();
+      }
+      controller = CameraController(
+        cameras[0],
+        ResolutionPreset.high,
+        enableAudio: enableAudio,
+        androidUseOpenGL: useOpenGL,
+      );
+
+      // If the controller is updated then update the UI.
+      controller!.addListener(() {
+        if (mounted) setState(() {});
+        if (controller!.value.hasError) {
+          showInSnackBar('Camera error ${controller!.value.errorDescription}');
+          if (_timer != null) {
+            _timer!.cancel();
+            _timer = null;
+          }
+          Wakelock.disable();
+        }
+      });
+
+      try {
+        await controller!.initialize();
+      } on CameraException catch (e) {
+        _showCameraException(e);
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+      cameraDirection = 'back';
+    } else {
+      if (controller != null) {
+        await controller!.dispose();
+      }
+      controller = CameraController(
+        cameras[1],
+        ResolutionPreset.high,
+        enableAudio: enableAudio,
+        androidUseOpenGL: useOpenGL,
+      );
+
+      // If the controller is updated then update the UI.
+      controller!.addListener(() {
+        if (mounted) setState(() {});
+        if (controller!.value.hasError) {
+          showInSnackBar('Camera error ${controller!.value.errorDescription}');
+          if (_timer != null) {
+            _timer!.cancel();
+            _timer = null;
+          }
+          Wakelock.disable();
+        }
+      });
+
+      try {
+        await controller!.initialize();
+      } on CameraException catch (e) {
+        _showCameraException(e);
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+      cameraDirection = 'front';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,7 +238,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
                         icon: const Icon(Icons.switch_video),
                         tooltip: 'Switch Camera',
                         onPressed: () {
-                          // toggleCameraDirection();
+                          toggleCameraDirection();
                         },
                       ),
                     ),
