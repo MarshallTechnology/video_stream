@@ -116,8 +116,11 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
                   backgroundColor: Colors.transparent,
                   elevation: 0.0,
                   title: streaming
-                      ? OutlinedButton(
+                      ? ElevatedButton(
                           onPressed: () => onStopButtonPressed(),
+                          style: ButtonStyle(
+                              backgroundColor:
+                                  MaterialStateProperty.all<Color>(Colors.red)),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -135,9 +138,9 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
                             ],
                           ),
                         )
-                      : OutlinedButton(
+                      : ElevatedButton(
                           onPressed: () => onVideoStreamingButtonPressed(),
-                          // onPressed: () => startStream(),
+                          style: ButtonStyle( backgroundColor: MaterialStateProperty.all<Color>(Colors.blue)),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
