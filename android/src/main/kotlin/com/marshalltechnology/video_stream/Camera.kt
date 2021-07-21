@@ -171,59 +171,6 @@ class Camera(
         }
     }
 
-    fun takePicture(filePath: String, result: MethodChannel.Result) {
-        val file = File(filePath)
-        if (file.exists()) {
-            result.error(
-                    "fileExists", "File at path '$filePath' already exists. Cannot overwrite.", null)
-            return
-        }
-
-        pictureImageReader!!.setOnImageAvailableListener(
-                { reader: ImageReader ->
-                    try {
-                        reader.acquireLatestImage().use { image ->
-                            val buffer = image.planes[0].buffer
-                            writeToFile(buffer, file)
-                            result.success(null)
-                        }
-                    } catch (e: IOException) {
-                        result.error("IOError", "Failed saving image", null)
-                    }
-                },
-                null)
-        try {
-            // Create a new capture session with all this stuff in it.
-            val captureBuilder = cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-            captureBuilder.addTarget(pictureImageReader!!.surface)
-            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, mediaOrientation)
-            cameraCaptureSession!!.capture(
-                    captureBuilder.build(),
-                    object : CaptureCallback() {
-                        override fun onCaptureFailed(
-                                session: CameraCaptureSession,
-                                request: CaptureRequest,
-                                failure: CaptureFailure) {
-                            val reason: String
-                            reason = when (failure.reason) {
-                                CaptureFailure.REASON_ERROR -> "An error happened in the framework"
-                                CaptureFailure.REASON_FLUSHED -> "The capture has failed due to an abortCaptures() call"
-                                else -> "Unknown reason"
-                            }
-                            result.error("captureFailure", reason, null)
-                        }
-
-                        // Close out the session once we have captured stuff.
-                        override fun onCaptureSequenceCompleted(session: CameraCaptureSession, sequenceId: Int, frameNumber: Long) {
-                            session.close()
-                        }
-                    },
-                    null)
-        } catch (e: CameraAccessException) {
-            result.error("cameraAccess", e.message, null);
-        }
-    }
-
 
     @Throws(CameraAccessException::class)
     private fun createCaptureSession(
@@ -297,31 +244,6 @@ class Camera(
         cameraDevice!!.createCaptureSession(surfaceList, callback, null)
     }
 
-    fun startVideoRecording(filePath: String, result: MethodChannel.Result) {
-        if (File(filePath).exists()) {
-            result.error("fileExists", "File at path '$filePath' already exists.", null)
-            return
-        }
-        try {
-            // If we are already setup we just start the recording part of everything instead.
-            if (rtmpCamera == null) {
-                prepareCameraForRecordAndStream(recordingProfile.videoFrameRate, null)
-                createCaptureSession(
-                        CameraDevice.TEMPLATE_RECORD,
-                        Runnable { rtmpCamera!!.startRecord(filePath) },
-                        rtmpCamera!!.inputSurface
-                )
-            } else {
-                rtmpCamera!!.startRecord(filePath)
-            }
-            result.success(null)
-        } catch (e: CameraAccessException) {
-            result.error("videoRecordingFailed", e.message, null)
-        } catch (e: IOException) {
-            result.error("videoRecordingFailed", e.message, null)
-        }
-    }
-
     fun stopVideoRecordingOrStreaming(result: MethodChannel.Result) {
         Log.i("Camera", "stopVideoRecordingOrStreaming ")
 
@@ -347,29 +269,6 @@ class Camera(
         }
     }
 
-    fun stopVideoRecording(result: MethodChannel.Result) {
-        Log.i("Camera", "stopVideoRecording")
-
-        if (rtmpCamera == null) {
-            result.success(null)
-            return
-        }
-        try {
-            currentRetries = 0
-            publishUrl = null
-            if (rtmpCamera != null) {
-                rtmpCamera!!.stopRecord()
-                rtmpCamera = null
-            }
-
-            startPreview()
-            result.success(null)
-        } catch (e: CameraAccessException) {
-            result.error("videoRecordingFailed", e.message, null)
-        } catch (e: IllegalStateException) {
-            result.error("videoRecordingFailed", e.message, null)
-        }
-    }
 
     fun stopVideoStreaming(result: MethodChannel.Result) {
         Log.i("Camera", "stopVideoRecording")
@@ -393,34 +292,6 @@ class Camera(
         } catch (e: IllegalStateException) {
             result.error("videoRecordingFailed", e.message, null)
         }
-    }
-
-    fun pauseVideoRecording(result: MethodChannel.Result) {
-        if (rtmpCamera == null || !rtmpCamera!!.isRecording) {
-            result.success(null)
-            return
-        }
-        try {
-            rtmpCamera!!.pauseRecord()
-        } catch (e: IllegalStateException) {
-            result.error("videoRecordingFailed", e.message, null)
-            return
-        }
-        result.success(null)
-    }
-
-    fun resumeVideoRecording(result: MethodChannel.Result) {
-        if (rtmpCamera == null || !rtmpCamera!!.isRecording) {
-            result.success(null)
-            return
-        }
-        try {
-            rtmpCamera!!.resumeRecord()
-        } catch (e: IllegalStateException) {
-            result.error("videoRecordingFailed", e.message, null)
-            return
-        }
-        result.success(null)
     }
 
     @Throws(CameraAccessException::class)

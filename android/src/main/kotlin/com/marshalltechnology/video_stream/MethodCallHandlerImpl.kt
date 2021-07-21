@@ -51,16 +51,9 @@ internal class MethodCallHandlerImpl(
                             }
                         })
             }
-            "takePicture" -> {
-                camera!!.takePicture(call.argument("path")!!, result)
-            }
             "prepareForVideoRecording" -> {
-
                 // This optimization is not required for Android.
                 result.success(null)
-            }
-            "startVideoRecording" -> {
-                camera!!.startVideoRecording(call.argument("filePath")!!, result)
             }
             "startVideoStreaming" -> {
                 Log.i("Stuff", call.arguments.toString())
@@ -95,17 +88,8 @@ internal class MethodCallHandlerImpl(
             "stopRecordingOrStreaming" -> {
                 camera!!.stopVideoRecordingOrStreaming(result)
             }
-            "stopRecording" -> {
-                camera!!.stopVideoRecording(result)
-            }
             "stopStreaming" -> {
                 camera!!.stopVideoStreaming(result)
-            }
-            "pauseVideoRecording" -> {
-                camera!!.pauseVideoRecording(result)
-            }
-            "resumeVideoRecording" -> {
-                camera!!.resumeVideoRecording(result)
             }
             "startImageStream" -> {
                 try {
