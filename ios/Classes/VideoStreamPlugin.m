@@ -507,75 +507,6 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
         }
         CFRelease(sampleBuffer);
     }
-    if (_isRecording && !_isRecordingPaused) {
-        if (_videoWriter.status == AVAssetWriterStatusFailed) {
-            _eventSink(@{
-                @"event" : @"error",
-                @"errorDescription" : [NSString stringWithFormat:@"%@", _videoWriter.error]
-                       });
-            return;
-        }
-        
-        CFRetain(sampleBuffer);
-        CMTime currentSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
-        
-        if (_videoWriter.status != AVAssetWriterStatusWriting) {
-            [_videoWriter startWriting];
-            [_videoWriter startSessionAtSourceTime:currentSampleTime];
-            [self newAudioSample:sampleBuffer];
-        }
-        
-        if (output == _captureVideoOutput) {
-            if (_videoIsDisconnected) {
-                _videoIsDisconnected = NO;
-                
-                if (_videoTimeOffset.value == 0) {
-                    _videoTimeOffset = CMTimeSubtract(currentSampleTime, _lastVideoSampleTime);
-                } else {
-                    CMTime offset = CMTimeSubtract(currentSampleTime, _lastVideoSampleTime);
-                    _videoTimeOffset = CMTimeAdd(_videoTimeOffset, offset);
-                }
-                
-                return;
-            }
-            
-            _lastVideoSampleTime = currentSampleTime;
-            
-            CVPixelBufferRef nextBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-            CMTime nextSampleTime = CMTimeSubtract(_lastVideoSampleTime, _videoTimeOffset);
-            [_videoAdaptor appendPixelBuffer:nextBuffer withPresentationTime:nextSampleTime];
-        } else {
-            CMTime dur = CMSampleBufferGetDuration(sampleBuffer);
-            
-            if (dur.value > 0) {
-                currentSampleTime = CMTimeAdd(currentSampleTime, dur);
-            }
-            
-            if (_audioIsDisconnected) {
-                _audioIsDisconnected = NO;
-                
-                if (_audioTimeOffset.value == 0) {
-                    _audioTimeOffset = CMTimeSubtract(currentSampleTime, _lastAudioSampleTime);
-                } else {
-                    CMTime offset = CMTimeSubtract(currentSampleTime, _lastAudioSampleTime);
-                    _audioTimeOffset = CMTimeAdd(_audioTimeOffset, offset);
-                }
-                
-                return;
-            }
-            
-            _lastAudioSampleTime = currentSampleTime;
-            
-            if (_audioTimeOffset.value != 0) {
-                CFRelease(sampleBuffer);
-                sampleBuffer = [self adjustTime:sampleBuffer by:_audioTimeOffset];
-            }
-            
-            [self newAudioSample:sampleBuffer];
-        }
-        
-        CFRelease(sampleBuffer);
-    }
 }
 
 - (CMSampleBufferRef)adjustTime:(CMSampleBufferRef)sample by:(CMTime)offset {
@@ -674,34 +605,6 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     return nil;
 }
 
-- (void)startVideoRecordingAtPath:(NSString *)path result:(FlutterResult)result {
-    if (!_isRecording) {
-        if (![self setupWriterForPath:path]) {
-            _eventSink(@{@"event" : @"error", @"errorDescription" : @"Setup Writer Failed"});
-            return;
-        }
-        _isRecording = YES;
-        _isRecordingPaused = NO;
-        _videoTimeOffset = CMTimeMake(0, 1);
-        _audioTimeOffset = CMTimeMake(0, 1);
-        _videoIsDisconnected = NO;
-        _audioIsDisconnected = NO;
-        result(nil);
-    } else {
-        _eventSink(@{@"event" : @"error", @"errorDescription" : @"Video is already recording!"});
-    }
-}
-
-- (void)pauseVideoRecording {
-    _isRecordingPaused = YES;
-    _videoIsDisconnected = YES;
-    _audioIsDisconnected = YES;
-}
-
-- (void)resumeVideoRecording {
-    _isRecordingPaused = NO;
-}
-
 - (void)pauseVideoStreaming {
     _isStreamingPaused = YES;
     [_rtmpStream pauseVideoStreaming];
@@ -740,37 +643,6 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
         _videoIsDisconnected = NO;
         _audioIsDisconnected = NO;
         result(nil);
-    }
-}
-
-
-- (void)startVideoRecordingAndStreamingAtUrl:(NSString *)url bitrate:(NSNumber *)bitrate filePath:(NSString *)filePath result:(FlutterResult)result {
-    if (!_isStreaming && !_isRecording) {
-        if (![self setupWriterForUrl:url ]) {
-            _eventSink(@{@"event" : @"error", @"errorDescription" : @"Setup Writer Failed"});
-            return;
-        }
-        if (![self setupWriterForPath:filePath ]) {
-            _eventSink(@{@"event" : @"error", @"errorDescription" : @"Setup Writer Failed"});
-            return;
-        }
-        
-        _rtmpStream = [[SwiftVideoStreamPlugin alloc] initWithSink:_eventSink];
-        if (bitrate == nil || bitrate == 0) {
-            bitrate = [NSNumber numberWithInt:160 * 1000];
-        }
-        [_rtmpStream openWithUrl:url width: _streamingSize.width height: _streamingSize.height bitrate: bitrate];
-        _isStreaming = YES;
-        _isStreamingPaused = NO;
-        _videoTimeOffset = CMTimeMake(0, 1);
-        _audioTimeOffset = CMTimeMake(0, 1);
-        _isRecording = YES;
-        _isRecordingPaused = NO;
-        _videoIsDisconnected = NO;
-        _audioIsDisconnected = NO;
-        result(nil);
-    } else {
-        _eventSink(@{@"event" : @"error", @"errorDescription" : @"Video is already recording!"});
     }
 }
 
@@ -821,28 +693,6 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     }
 }
 
-- (void)stopVideoRecordingWithResult:(FlutterResult)result {
-    if (!_isRecording) {
-        NSError *error =
-        [NSError errorWithDomain:NSCocoaErrorDomain
-                            code:NSURLErrorResourceUnavailable
-                        userInfo:@{NSLocalizedDescriptionKey : @"Video is not recording!"}];
-        result(getFlutterError(error));
-    } else {
-        _isRecording = NO;
-        if (_videoWriter.status != AVAssetWriterStatusUnknown) {
-            [_videoWriter finishWritingWithCompletionHandler:^{
-                if (self->_videoWriter.status == AVAssetWriterStatusCompleted) {
-                } else {
-                    self->_eventSink(@{
-                        @"event" : @"error",
-                        @"errorDescription" : @"AVAssetWriter could not finish writing!"
-                                     });
-                }
-            }];
-        }
-    }
-}
 
 - (void)startImageStreamWithMessenger:(NSObject<FlutterBinaryMessenger> *)messenger {
     if (!_isStreamingImages) {
@@ -1096,12 +946,6 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     } else if ([@"stopImageStream" isEqualToString:call.method]) {
         [_camera stopImageStream];
         result(nil);
-    } else if ([@"pauseVideoRecording" isEqualToString:call.method]) {
-        [_camera pauseVideoRecording];
-        result(nil);
-    } else if ([@"resumeVideoRecording" isEqualToString:call.method]) {
-        [_camera resumeVideoRecording];
-        result(nil);
     } else if ([@"pauseVideoStreaming" isEqualToString:call.method]) {
         [_camera pauseVideoStreaming];
         result(nil);
@@ -1122,19 +966,10 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
             [_camera close];
             _dispatchQueue = nil;
             result(nil);
-        } else if ([@"prepareForVideoRecording" isEqualToString:call.method]) {
-            [_camera setUpCaptureSessionForAudio];
-            result(nil);
-        } else if ([@"startVideoRecording" isEqualToString:call.method]) {
-            [_camera startVideoRecordingAtPath:call.arguments[@"filePath"] result:result];
         } else if ([@"startVideoStreaming" isEqualToString:call.method]) {
             [_camera startVideoStreamingAtUrl:call.arguments[@"url"] bitrate:call.arguments[@"bitrate"] result:result];
-        } else if ([@"startVideoRecordingAndStreaming" isEqualToString:call.method]) {
-            [_camera startVideoRecordingAndStreamingAtUrl:call.arguments[@"url"] bitrate:call.arguments[@"bitrate"] filePath:call.arguments[@"filePath"] result:result];
         } else if ([@"stopStreaming" isEqualToString:call.method]) {
             [_camera stopVideoStreamingWithResult:result];
-        } else if ([@"stopRecording" isEqualToString:call.method]) {
-            [_camera stopVideoRecordingWithResult:result];
         } else if ([@"stopRecordingOrStreaming" isEqualToString:call.method]) {
             [_camera stopVideoRecordingOrStreamingWithResult:result];
         } else {
