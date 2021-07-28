@@ -40,7 +40,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   late VoidCallback videoPlayerListener;
   bool enableAudio = true;
   bool useOpenGL = true;
-  String streamURL = "rtmp://54.90.52.196:1935/live/test";
+  String streamURL = "rtmp://[your rtmp server address]/live";
   bool streaming = false;
   String? cameraDirection;
 
