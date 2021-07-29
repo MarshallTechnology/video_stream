@@ -1,6 +1,6 @@
 # video_stream
 
-A new Flutter package to live stream video to RTMP server.
+A new Flutter package for basic live streaming video to RTMP server.
 
 ## Getting Started
 
@@ -45,5 +45,3 @@ packagingOptions {
    exclude 'project.clj'
 }
 ```
-
-### Example
