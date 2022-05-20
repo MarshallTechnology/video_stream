@@ -3,6 +3,9 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/video_stream.iml" filepath="$PROJECT_DIR$/.idea/modules/video_stream.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/video_stream.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/video_stream.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/video_stream.main.iml" filepath="$PROJECT_DIR$/.idea/modules/video_stream.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/video_stream.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/video_stream.unitTest.iml" />
     </modules>
   </component>
 </project>
