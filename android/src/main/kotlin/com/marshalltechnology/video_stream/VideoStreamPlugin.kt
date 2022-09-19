@@ -42,7 +42,7 @@ public class VideoStreamPlugin: FlutterPlugin, ActivityAware {
         fun registerWith(registrar: Registrar) {
             val plugin = VideoStreamPlugin();
             plugin.maybeStartListening(
-                registrar.activity(),
+                registrar.activity()!!,
                 registrar.messenger(),
                 object : PermissionStuff {
                     override fun adddListener(listener: PluginRegistry.RequestPermissionsResultListener) {
